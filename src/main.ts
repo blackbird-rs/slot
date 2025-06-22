@@ -24,7 +24,8 @@ const SYMBOLS = [
   { img: "/assets/sym4.png", frame: "/assets/sym4_frame.png" },
 ];
 
-const BACKGROUND_IMAGE = "/assets/bg.jpeg"; // Using bg.jpeg as requested
+const BACKGROUND_IMAGE = "/assets/bg.jpeg";
+const SETTINGS_ICON = "/assets/settings.svg";
 
 const SPIN_DURATION = 1100;
 const BET_AMOUNT = 2;
@@ -54,9 +55,10 @@ interface ReelAnim {
   // --- Init audio ---
   await AudioManager.init();
 
-  // --- Load background image and game assets ---
+  // --- Load assets including settings icon ---
   await Assets.load([
     BACKGROUND_IMAGE,
+    SETTINGS_ICON,
     ...SYMBOLS.flatMap(s => [s.img, s.frame]),
     "/assets/spin.svg"
   ]);
@@ -71,8 +73,6 @@ interface ReelAnim {
     const screenW = app.screen.width;
     const screenH = app.screen.height;
     const texture = bgSprite.texture;
-
-    // Stretch to cover (cover mode)
     const scaleX = screenW / texture.width;
     const scaleY = screenH / texture.height;
     const scale = Math.max(scaleX, scaleY);
@@ -102,6 +102,122 @@ interface ReelAnim {
   spinButton.anchor.set(0.5);
   spinButton.eventMode = 'static';
   spinButton.cursor = 'pointer';
+
+  // --- Settings Button ---
+  const settingsButton = new Sprite(Assets.get(SETTINGS_ICON));
+  settingsButton.anchor.set(1, 0); // top-right
+  settingsButton.eventMode = 'static';
+  settingsButton.cursor = 'pointer';
+  app.stage.addChild(settingsButton);
+
+  // --- Settings Popup ---
+  const settingsPopup = new Container();
+  settingsPopup.visible = false;
+  const popupBg = new Graphics();
+  const popupWidth = 320;
+  const popupHeight = 180;
+  popupBg.beginFill(0x222235, 0.98);
+  popupBg.drawRoundedRect(0, 0, popupWidth, popupHeight, 32);
+  popupBg.endFill();
+  settingsPopup.addChild(popupBg);
+
+  // UI State for toggles
+  let musicOn = true;
+  let sfxOn = true;
+  // Try to restore from localStorage
+  try {
+    musicOn = localStorage.getItem("slot_musicOn") !== "false";
+    sfxOn = localStorage.getItem("slot_sfxOn") !== "false";
+  } catch {}
+
+  // Helper for toggle button
+  function makeToggle(text: string, state: boolean, y: number, cb: (val: boolean) => void): Container {
+    const cont = new Container();
+    const lbl = new Text(text, {fill: "white", fontSize: 24, fontWeight: "bold"});
+    lbl.x = 24;
+    lbl.y = 0;
+    cont.addChild(lbl);
+
+    const box = new Graphics();
+    function renderBox() {
+      box.clear();
+      box.lineStyle(3, 0xffffff, 0.7);
+      box.beginFill(state ? 0x4ee44e : 0x222235, 1);
+      box.drawRoundedRect(0, 0, 50, 36, 10);
+      box.endFill();
+      if (state) {
+        box.lineStyle(0);
+        box.beginFill(0xffffff);
+        box.drawCircle(36, 18, 8);
+        box.endFill();
+      } else {
+        box.lineStyle(0);
+        box.beginFill(0xffffff);
+        box.drawCircle(14, 18, 8);
+        box.endFill();
+      }
+    }
+    renderBox();
+    box.x = popupWidth - 80;
+    box.y = 0;
+    box.eventMode = 'static';
+    box.cursor = "pointer";
+    box.on("pointertap", () => {
+      state = !state;
+      renderBox();
+      cb(state);
+    });
+    cont.addChild(box);
+    cont.y = y;
+    return cont;
+  }
+
+  // Music toggle
+  const musicToggle = makeToggle("Music", musicOn, 30, (val) => {
+    musicOn = val;
+    AudioManager.setMusicVolume(musicOn ? 0.5 : 0);
+    try { localStorage.setItem("slot_musicOn", String(musicOn)); } catch {}
+    if (musicOn) AudioManager.playMusic(); else AudioManager.stopMusic();
+  });
+
+  // SFX toggle
+  const sfxToggle = makeToggle("Sound Effects", sfxOn, 90, (val) => {
+    sfxOn = val;
+    AudioManager.setSfxVolume(sfxOn ? 1 : 0);
+    try { localStorage.setItem("slot_sfxOn", String(sfxOn)); } catch {}
+  });
+
+  settingsPopup.addChild(musicToggle);
+  settingsPopup.addChild(sfxToggle);
+
+  // Close button
+  const closeBtn = new Text("Close", {fill: "white", fontSize: 20, fontWeight: "bold"});
+  closeBtn.anchor.set(0.5);
+  closeBtn.eventMode = "static";
+  closeBtn.cursor = "pointer";
+  closeBtn.x = popupWidth / 2;
+  closeBtn.y = popupHeight - 28;
+  closeBtn.on("pointertap", () => { settingsPopup.visible = false; });
+  settingsPopup.addChild(closeBtn);
+
+  app.stage.addChild(settingsPopup);
+
+  function layoutSettings() {
+    // Top right, 24px from top/right
+    const pad = 24 * scale;
+    settingsButton.scale.set(scale * 0.2);
+    settingsButton.x = app.screen.width - pad;
+    settingsButton.y = pad;
+
+    // Center popup
+    settingsPopup.x = (app.screen.width - popupWidth) / 2;
+    settingsPopup.y = (app.screen.height - popupHeight) / 2;
+    settingsPopup.zIndex = 100;
+  }
+
+  settingsButton.on("pointertap", () => {
+    settingsPopup.visible = !settingsPopup.visible;
+  });
 
   // --- Spin Button Rotation Animation State ---
   let spinBtnRotationPhase: 0 | 1 | null = null;
@@ -141,7 +257,6 @@ interface ReelAnim {
 
   // Helper for layout
   function getStackBaseY(scale: number): number {
-    // Bottom of grid
     const spacingY = scale * (SPRITE_SIZE + CELL_MARGIN);
     const { startY } = computeGridOrigin(app.screen.width, app.screen.height, scale);
     return startY + (ROW_COUNT - 1) * spacingY + scale * SPRITE_SIZE / 2;
@@ -150,19 +265,16 @@ interface ReelAnim {
   function relayoutAll() {
     app.renderer.resize(window.innerWidth, window.innerHeight);
 
-    // --- resize background ---
     resizeBackground();
 
     layoutMode = getLayoutMode(window.innerWidth, window.innerHeight);
     scale = getScale(window.innerWidth, window.innerHeight);
 
-    // Update text style/font size
     textFieldStyle = createTextFieldStyle(scale);
     betText.style = textFieldStyle;
     balanceText.style = textFieldStyle;
     winText.style = textFieldStyle;
 
-    // Update all grid symbols/frames scaling and position
     for (let col = 0; col < REEL_COUNT; col++) {
       for (let row = 0; row < ROW_COUNT; row++) {
         const cell = reels[col][row];
@@ -174,7 +286,6 @@ interface ReelAnim {
         }
       }
     }
-    // Update reel columns' positions (for each reel)
     const spacingX = scale * (SPRITE_SIZE + CELL_MARGIN);
     const { startX, startY } = computeGridOrigin(app.screen.width, app.screen.height, scale);
     for (let col = 0; col < REEL_COUNT; col++) {
@@ -182,19 +293,15 @@ interface ReelAnim {
       reelColumns[col].y = startY;
     }
 
-    // Update spin button scale
     spinButton.scale.set(scale);
 
-    // --- UI vertical stack below grid ---
     const stackBaseY = getStackBaseY(scale);
     let stackY = stackBaseY + 32 * scale;
 
-    // Win text (centered)
     winText.x = app.screen.width / 2 - winText.width / 2;
     winText.y = stackY;
     stackY += winText.height + 16 * scale;
 
-    // Bet/Balance (side by side, centered as group)
     const betBalanceGap = 24 * scale;
     const betBalanceWidth = betText.width + betBalanceGap + balanceText.width;
     betText.x = app.screen.width / 2 - betBalanceWidth / 2;
@@ -205,16 +312,13 @@ interface ReelAnim {
     stackY += betText.height + 32 * scale;
 
     if (layoutMode === "mobile") {
-      // Spin button in stack, centered
       spinButton.x = app.screen.width / 2;
       spinButton.y = stackY + spinButton.height / 2;
     } else {
-      // Spin button in bottom right
       spinButton.x = app.screen.width - spinButton.width / 2 - 32 * scale;
       spinButton.y = app.screen.height - spinButton.height / 2 - 32 * scale;
     }
 
-    // Update grid mask
     gridMask.clear();
     const maskX = startX - scale * SPRITE_SIZE / 2;
     const maskY = startY - scale * SPRITE_SIZE / 2;
@@ -226,6 +330,8 @@ interface ReelAnim {
       ROW_COUNT * scale * SPRITE_SIZE + (ROW_COUNT - 1) * scale * CELL_MARGIN
     );
     gridMask.endFill();
+
+    layoutSettings();
   }
 
   // --- Resize observer for container (robust fix for inspector/devtools) ---
@@ -236,13 +342,11 @@ interface ReelAnim {
   });
   observer.observe(container);
 
-  // Fallback in case of missed events
   window.addEventListener("resize", () => {
     app.renderer.resize(window.innerWidth, window.innerHeight);
     relayoutAll();
   });
 
-  // Polling fallback for browser quirks (e.g. devtools close w/o resize)
   let lastW = window.innerWidth;
   let lastH = window.innerHeight;
   function checkResize() {
@@ -280,11 +384,10 @@ interface ReelAnim {
     ensureMusic();
 
     if (isSpinning && !spinningFastForward) {
-      // Fast forward if already spinning!
       spinningFastForward = true;
       return;
     }
-    if (isSpinning) return; // ignore further clicks
+    if (isSpinning) return;
 
     clearPulsingSprites();
     balance -= BET_AMOUNT;
@@ -294,13 +397,9 @@ interface ReelAnim {
     isSpinning = true;
     spinningFastForward = false;
 
-    // Play spin button sound (only at spin start)
     AudioManager.play("spin");
-
-    // Start reel spinning sound (looped)
     AudioManager.playLoop("reel");
 
-    // --- Animate spin button rotation: to one side, then back ---
     spinBtnIsAnimating = true;
     spinBtnRotationPhase = 0;
     spinBtnRotationTarget = Math.PI * 0.6;
@@ -364,7 +463,6 @@ interface ReelAnim {
   app.stage.addChild(gridMask);
 
   app.ticker.add(() => {
-    // --- Spin button rotation animation (to one side, then back) ---
     if (spinBtnIsAnimating && spinBtnRotationPhase !== null) {
       if (spinBtnRotationPhase === 0) {
         if (Math.abs(spinButton.rotation - spinBtnRotationTarget) > 0.01) {
@@ -387,19 +485,17 @@ interface ReelAnim {
       }
     }
 
-    // --- Reel spinning, bounce, and fast forward ---
     let allDone = true;
     const spacingY = scale * (SPRITE_SIZE + CELL_MARGIN);
-    const BOUNCE_AMOUNT = 36 * scale;          // more expressive overshoot
-    const BOUNCE_BACK_AMOUNT = 12 * scale;     // expressive reverse
-    const BOUNCE_OUT_TIME = 120;               // ms
-    const BOUNCE_BACK_TIME = 110;              // ms
+    const BOUNCE_AMOUNT = 36 * scale;
+    const BOUNCE_BACK_AMOUNT = 12 * scale;
+    const BOUNCE_OUT_TIME = 120;
+    const BOUNCE_BACK_TIME = 110;
 
     for (const anim of reelAnimations) {
       if (anim.phase === "spinning") {
         allDone = false;
         if (spinningFastForward || (performance.now() - anim.startTime > anim.duration)) {
-          // Snap to result and start first bounce (overshoot)
           anim.spinning = false;
           anim.container.removeChildren();
           for (let row = 0; row < ROW_COUNT; row++) {
@@ -450,7 +546,6 @@ interface ReelAnim {
     }
 
     if (!isSpinning) {
-      // --- Pulse animation for winning symbols ---
       if (pulsingSprites.length > 0) {
         pulseTicker += 0.05;
         const pulse = 1 + 0.1 * Math.sin(pulseTicker * 2 * Math.PI);
@@ -465,24 +560,19 @@ interface ReelAnim {
       isSpinning = false;
       spinningFastForward = false;
 
-      // Stop reel sound
       AudioManager.stopLoop("reel");
 
-      // --- Show win ---
       const resultIndices: number[][] = (spinButton as any)._finalResultIndices;
       const winningPositions = getWinningPositions(resultIndices);
 
-      // $1 per unique winning symbol (max 9)
       const winAmount = calculateWinAmount(winningPositions);
       if (winAmount > 0) {
         balance += winAmount;
         updateBalanceText();
-        // Play win sound (now looped until next spin)
         AudioManager.playLoop("win");
       }
       updateWinText(winAmount);
 
-      // --- Pulse winning symbols ---
       clearPulsingSprites();
       for (const { col, row } of winningPositions) {
         if (reels[col] && reels[col][row] && reels[col][row].symbol) {
