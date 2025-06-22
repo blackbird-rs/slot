@@ -1,34 +1,12 @@
-import { REEL_COUNT, ROW_COUNT } from "./slotGrid";
-import type { SpinResult } from "./types";
-import { getWinningPositions } from "./slotGrid";
+// Handles win calculation for the slot machine
 
-export function calculateWin(resultIndices: number[][]): number {
-  let win = 0;
-  for (let row = 0; row < ROW_COUNT; row++) {
-    let col = 0;
-    while (col < REEL_COUNT) {
-      const symbol = resultIndices[col][row];
-      let count = 1;
-      for (let k = col + 1; k < REEL_COUNT; k++) {
-        if (resultIndices[k][row] === symbol) {
-          count++;
-        } else {
-          break;
-        }
-      }
-      if (count >= 2) {
-        win += count;
-        col += count;
-      } else {
-        col++;
-      }
-    }
-  }
-  return win;
-}
-
-export function getSpinResult(resultIndices: number[][]): SpinResult {
-  const winningPositions = getWinningPositions(resultIndices);
-  const winAmount = calculateWin(resultIndices);
-  return { resultIndices, winningPositions, winAmount };
+/**
+ * Calculates the win amount given the positions of winning symbols.
+ * Each unique winning symbol (by col,row) awards $1.
+ * @param winningPositions Array of {col, row} for all winning symbols
+ * @returns win amount (integer, max 9)
+ */
+export function calculateWinAmount(winningPositions: {col:number, row:number}[]): number {
+  const uniqueSymbols = new Set(winningPositions.map(pos => `${pos.col},${pos.row}`));
+  return uniqueSymbols.size;
 }

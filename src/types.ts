@@ -7,3 +7,5 @@ export interface SpinResult {
   winningPositions: { col: number, row: number }[];
   winAmount: number;
 }
+
+export type LayoutMode = "desktop" | "mobile";
