@@ -6,6 +6,7 @@ A slot machine game built with [PixiJS](https://pixijs.com/), TypeScript, and HT
 
 - Responsive design (desktop & mobile)
 - Animated slot reels
+- Animation cancelation with spin button for quicker play
 - Sound effects and background music (toggleable)
 - Win calculation logic based on matching symbols
 - Settings popup
