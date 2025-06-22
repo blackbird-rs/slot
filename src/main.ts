@@ -131,6 +131,7 @@ function getWinningPositions(resultIndices: number[][]): {col: number, row: numb
   spinButton.cursor = 'pointer';
 
   // --- Spin Button Rotation Animation State ---
+  let spinBtnRotationPhase: 0 | 1 | null = null; // 0 = to side, 1 = back to 0, null = not animating
   let spinBtnRotationTarget = 0;
   let spinBtnRotationSpeed = 0;
   let spinBtnIsAnimating = false;
@@ -277,10 +278,11 @@ function getWinningPositions(resultIndices: number[][]): {col: number, row: numb
 
     isSpinning = true;
 
-    // --- Animate spin button rotation ---
+    // --- Animate spin button rotation: to one side, then back ---
     spinBtnIsAnimating = true;
-    spinBtnRotationTarget = spinButton.rotation + Math.PI * 0.6; // Rotate ~108deg
-    spinBtnRotationSpeed = 0.11; // Radians per frame (tweak for slower/faster)
+    spinBtnRotationPhase = 0;
+    spinBtnRotationTarget = Math.PI * 0.6; // ~108 deg to the right
+    spinBtnRotationSpeed = 0.13; // Radians per frame (tweak for speed)
 
     const finalResultIndices: number[][] = [];
     reelAnimations = [];
@@ -340,15 +342,28 @@ function getWinningPositions(resultIndices: number[][]): {col: number, row: numb
   layoutEverything();
 
   app.ticker.add(() => {
-    // --- Spin button rotation animation ---
-    if (spinBtnIsAnimating) {
-      // Rotate until close to or past the target
-      if (Math.abs(spinButton.rotation - spinBtnRotationTarget) > 0.01) {
-        const diff = spinBtnRotationTarget - spinButton.rotation;
-        spinButton.rotation += Math.sign(diff) * Math.min(Math.abs(diff), spinBtnRotationSpeed);
-      } else {
-        spinButton.rotation = spinBtnRotationTarget;
-        spinBtnIsAnimating = false;
+    // --- Spin button rotation animation (to one side, then back) ---
+    if (spinBtnIsAnimating && spinBtnRotationPhase !== null) {
+      if (spinBtnRotationPhase === 0) {
+        // Rotating to target
+        if (Math.abs(spinButton.rotation - spinBtnRotationTarget) > 0.01) {
+          const diff = spinBtnRotationTarget - spinButton.rotation;
+          spinButton.rotation += Math.sign(diff) * Math.min(Math.abs(diff), spinBtnRotationSpeed);
+        } else {
+          spinButton.rotation = spinBtnRotationTarget;
+          spinBtnRotationPhase = 1;
+          spinBtnRotationTarget = 0; // Rotate back to zero
+        }
+      } else if (spinBtnRotationPhase === 1) {
+        // Rotating back to original
+        if (Math.abs(spinButton.rotation) > 0.01) {
+          const diff = 0 - spinButton.rotation;
+          spinButton.rotation += Math.sign(diff) * Math.min(Math.abs(diff), spinBtnRotationSpeed);
+        } else {
+          spinButton.rotation = 0;
+          spinBtnIsAnimating = false;
+          spinBtnRotationPhase = null;
+        }
       }
     }
 
