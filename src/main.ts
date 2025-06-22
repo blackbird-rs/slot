@@ -8,7 +8,7 @@ import { createTextFieldStyle } from "./ui";
 import { calculateWinAmount } from "./logic";
 import { AudioManager } from "./audioManager";
 
-// --- Responsive helpers ---
+// Responsiveness stuff
 function getLayoutMode(width: number, height: number): LayoutMode {
   if (width < 700 || width < height * 1.05) return "mobile";
   return "desktop";
@@ -26,6 +26,7 @@ const SYMBOLS = [
 
 const BACKGROUND_IMAGE = "/assets/bg.jpeg";
 const SETTINGS_ICON = "/assets/settings.svg";
+const SPIN_ICON = "/assets/spin.svg";
 
 const SPIN_DURATION = 1100;
 const BET_AMOUNT = 2;
@@ -52,18 +53,15 @@ interface ReelAnim {
   await app.init({ background: "#1099bb", resizeTo: window });
   document.getElementById("pixi-container")!.appendChild(app.canvas);
 
-  // --- Init audio ---
   await AudioManager.init();
 
-  // --- Load assets including settings icon ---
   await Assets.load([
     BACKGROUND_IMAGE,
     SETTINGS_ICON,
     ...SYMBOLS.flatMap(s => [s.img, s.frame]),
-    "/assets/spin.svg"
+    SPIN_ICON
   ]);
 
-  // --- Background sprite setup ---
   const bgSprite = new Sprite(Assets.get(BACKGROUND_IMAGE));
   bgSprite.anchor.set(0);
   bgSprite.position.set(0, 0);
@@ -84,7 +82,7 @@ interface ReelAnim {
 
   let balance = INITIAL_BALANCE;
 
-  // --- Slot Grid ---
+  // Slot Grid
   const gridMask = new Graphics();
   const reelContainer = new Container();
   app.stage.addChild(reelContainer);
@@ -97,20 +95,25 @@ interface ReelAnim {
 
   setupGrid(SYMBOLS, reels, reelColumns, reelContainer, scale);
 
-  // --- Spin Button ---
-  const spinButton = new Sprite(Assets.get("/assets/spin.svg"));
+  // Spin Button
+  const spinButton = new Sprite(Assets.get(SPIN_ICON));
   spinButton.anchor.set(0.5);
   spinButton.eventMode = 'static';
   spinButton.cursor = 'pointer';
 
-  // --- Settings Button ---
+  let spinBtnRotationPhase: 0 | 1 | null = null;
+  let spinBtnRotationTarget = 0;
+  let spinBtnRotationSpeed = 0;
+  let spinBtnIsAnimating = false;
+
+  // Settings Button
   const settingsButton = new Sprite(Assets.get(SETTINGS_ICON));
   settingsButton.anchor.set(1, 0); // top-right
   settingsButton.eventMode = 'static';
   settingsButton.cursor = 'pointer';
   app.stage.addChild(settingsButton);
 
-  // --- Settings Popup ---
+  // Settings Popup
   const settingsPopup = new Container();
   settingsPopup.visible = false;
   const popupBg = new Graphics();
@@ -121,16 +124,15 @@ interface ReelAnim {
   popupBg.endFill();
   settingsPopup.addChild(popupBg);
 
-  // UI State for toggles
+  // Toggles
   let musicOn = true;
   let sfxOn = true;
-  // Try to restore from localStorage
+
   try {
     musicOn = localStorage.getItem("slot_musicOn") !== "false";
     sfxOn = localStorage.getItem("slot_sfxOn") !== "false";
   } catch {}
 
-  // Helper for toggle button
   function makeToggle(text: string, state: boolean, y: number, cb: (val: boolean) => void): Container {
     const cont = new Container();
     const lbl = new Text(text, {fill: "white", fontSize: 24, fontWeight: "bold"});
@@ -203,13 +205,11 @@ interface ReelAnim {
   app.stage.addChild(settingsPopup);
 
   function layoutSettings() {
-    // Top right, 24px from top/right
     const pad = 24 * scale;
     settingsButton.scale.set(scale * 0.2);
     settingsButton.x = app.screen.width - pad;
     settingsButton.y = pad;
 
-    // Center popup
     settingsPopup.x = (app.screen.width - popupWidth) / 2;
     settingsPopup.y = (app.screen.height - popupHeight) / 2;
     settingsPopup.zIndex = 100;
@@ -219,13 +219,8 @@ interface ReelAnim {
     settingsPopup.visible = !settingsPopup.visible;
   });
 
-  // --- Spin Button Rotation Animation State ---
-  let spinBtnRotationPhase: 0 | 1 | null = null;
-  let spinBtnRotationTarget = 0;
-  let spinBtnRotationSpeed = 0;
-  let spinBtnIsAnimating = false;
+  //Text Fields
 
-  // --- UI Texts ---
   let textFieldStyle = createTextFieldStyle(scale);
   const betText = new Text(`Bet: $${BET_AMOUNT}`, textFieldStyle);
   const balanceText = new Text(`Balance: $${balance}`, textFieldStyle);
@@ -255,7 +250,7 @@ interface ReelAnim {
   let spinningFastForward = false;
   let reelAnimations: ReelAnim[] = [];
 
-  // Helper for layout
+  // Layout
   function getStackBaseY(scale: number): number {
     const spacingY = scale * (SPRITE_SIZE + CELL_MARGIN);
     const { startY } = computeGridOrigin(app.screen.width, app.screen.height, scale);
@@ -334,7 +329,7 @@ interface ReelAnim {
     layoutSettings();
   }
 
-  // --- Resize observer for container (robust fix for inspector/devtools) ---
+  // Hacky, for inspector resizing
   const container = document.getElementById('pixi-container')!;
   const observer = new ResizeObserver(() => {
     app.renderer.resize(window.innerWidth, window.innerHeight);
@@ -367,7 +362,7 @@ interface ReelAnim {
 
   relayoutAll();
 
-  // --- Play background music once user interacts ---
+  // Play music only when something is clicked
   let musicStarted = false;
   function ensureMusic() {
     if (!musicStarted) {
@@ -378,7 +373,6 @@ interface ReelAnim {
   window.addEventListener('pointerdown', ensureMusic, { once: true });
 
   spinButton.on('pointertap', () => {
-    // Stop win sound (even if it was still playing/looping)
     AudioManager.stopLoop("win");
 
     ensureMusic();

@@ -1,4 +1,4 @@
-import { Container, Sprite, Graphics, Assets } from "pixi.js";
+import { Container, Sprite, Assets } from "pixi.js";
 import { SymbolCell } from "./types";
 
 export const REEL_COUNT = 3;
