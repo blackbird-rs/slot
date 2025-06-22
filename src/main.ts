@@ -225,17 +225,17 @@ interface ReelAnim {
 
   // SFX toggle
   const sfxToggle = makeToggle("Sound Effects", sfxOn, 90, (val) => {
-  sfxOn = val;
-  AudioManager.setSfxVolume(sfxOn ? 1 : 0);
-  try {
-    localStorage.setItem("slot_sfxOn", String(sfxOn));
-  } catch {
-    console.log("SFX Toggle error");
-  }
-  if (!sfxOn) {
-    AudioManager.stopLoop("win");
-  }
-});
+    sfxOn = val;
+    AudioManager.setSfxVolume(sfxOn ? 1 : 0);
+    try {
+      localStorage.setItem("slot_sfxOn", String(sfxOn));
+    } catch {
+      console.log("SFX Toggle error");
+    }
+    if (!sfxOn) {
+      AudioManager.stopLoop("win");
+    }
+  });
 
   settingsPopup.addChild(musicToggle);
   settingsPopup.addChild(sfxToggle);
