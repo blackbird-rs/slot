@@ -24,15 +24,19 @@ export function getRandomColumnResult(symbols: SymbolAsset[]): number[] {
 export function computeGridOrigin(
   screenWidth: number,
   screenHeight: number,
-  scale: number
+  scale: number,
 ): { startX: number; startY: number } {
   const spacingX = scale * (SPRITE_SIZE + CELL_MARGIN);
   const spacingY = scale * (SPRITE_SIZE + CELL_MARGIN);
   const totalWidth = (REEL_COUNT - 1) * spacingX;
   const totalHeight = (ROW_COUNT - 1) * spacingY;
   return {
-    startX: (screenWidth - totalWidth - scale * SPRITE_SIZE) / 2 + scale * SPRITE_SIZE / 2,
-    startY: (screenHeight - totalHeight - scale * SPRITE_SIZE) / 2 + scale * SPRITE_SIZE / 2,
+    startX:
+      (screenWidth - totalWidth - scale * SPRITE_SIZE) / 2 +
+      (scale * SPRITE_SIZE) / 2,
+    startY:
+      (screenHeight - totalHeight - scale * SPRITE_SIZE) / 2 +
+      (scale * SPRITE_SIZE) / 2,
   };
 }
 
@@ -41,7 +45,7 @@ export function setupGrid(
   reels: SymbolCell[][],
   reelColumns: Container[],
   reelContainer: Container,
-  scale: number
+  scale: number,
 ) {
   for (let col = 0; col < REEL_COUNT; col++) {
     const colContainer = new Container();
@@ -65,8 +69,10 @@ export function setupGrid(
   }
 }
 
-export function getWinningPositions(resultIndices: number[][]): { col: number, row: number }[] {
-  const winning: { col: number, row: number }[] = [];
+export function getWinningPositions(
+  resultIndices: number[][],
+): { col: number; row: number }[] {
+  const winning: { col: number; row: number }[] = [];
   for (let row = 0; row < ROW_COUNT; row++) {
     let col = 0;
     while (col < REEL_COUNT) {

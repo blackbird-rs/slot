@@ -10,8 +10,8 @@ export class AudioManager {
 
   static assets: Record<string, string> = {
     music: "/assets/music.mp3",
-    reel: "/assets/reel.mp3",      
-    win: "/assets/win.mp3",       
+    reel: "/assets/reel.mp3",
+    win: "/assets/win.mp3",
   };
 
   static async init() {
@@ -67,7 +67,9 @@ export class AudioManager {
         audio.currentTime = 0;
         audio.play();
       }
-    } catch (e) {  }
+    } catch {
+      /*ignore */
+    }
   }
 
   static playLoop(sfx: string) {

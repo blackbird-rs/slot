@@ -1,8 +1,24 @@
-import { Application, Assets, Sprite, Container, Graphics, Text } from "pixi.js";
+import {
+  Application,
+  Assets,
+  Sprite,
+  Container,
+  Graphics,
+  Text,
+} from "pixi.js";
 import { SymbolCell, LayoutMode } from "./types";
 import {
-  REEL_COUNT, ROW_COUNT, SPRITE_SIZE, CELL_MARGIN, DESIGN_WIDTH, DESIGN_HEIGHT,
-  getRandomSymbolIdx, getRandomColumnResult, setupGrid, computeGridOrigin, getWinningPositions
+  REEL_COUNT,
+  ROW_COUNT,
+  SPRITE_SIZE,
+  CELL_MARGIN,
+  DESIGN_WIDTH,
+  DESIGN_HEIGHT,
+  getRandomSymbolIdx,
+  getRandomColumnResult,
+  setupGrid,
+  computeGridOrigin,
+  getWinningPositions,
 } from "./slotGrid";
 import { createTextFieldStyle } from "./ui";
 import { calculateWinAmount } from "./logic";
@@ -58,8 +74,8 @@ interface ReelAnim {
   await Assets.load([
     BACKGROUND_IMAGE,
     SETTINGS_ICON,
-    ...SYMBOLS.flatMap(s => [s.img, s.frame]),
-    SPIN_ICON
+    ...SYMBOLS.flatMap((s) => [s.img, s.frame]),
+    SPIN_ICON,
   ]);
 
   const bgSprite = new Sprite(Assets.get(BACKGROUND_IMAGE));
@@ -90,7 +106,10 @@ interface ReelAnim {
   const reelColumns: Container[] = [];
   const reels: SymbolCell[][] = [];
 
-  let layoutMode: LayoutMode = getLayoutMode(window.innerWidth, window.innerHeight);
+  let layoutMode: LayoutMode = getLayoutMode(
+    window.innerWidth,
+    window.innerHeight,
+  );
   let scale = getScale(window.innerWidth, window.innerHeight);
 
   setupGrid(SYMBOLS, reels, reelColumns, reelContainer, scale);
@@ -98,8 +117,8 @@ interface ReelAnim {
   // Spin Button
   const spinButton = new Sprite(Assets.get(SPIN_ICON));
   spinButton.anchor.set(0.5);
-  spinButton.eventMode = 'static';
-  spinButton.cursor = 'pointer';
+  spinButton.eventMode = "static";
+  spinButton.cursor = "pointer";
 
   let spinBtnRotationPhase: 0 | 1 | null = null;
   let spinBtnRotationTarget = 0;
@@ -109,8 +128,8 @@ interface ReelAnim {
   // Settings Button
   const settingsButton = new Sprite(Assets.get(SETTINGS_ICON));
   settingsButton.anchor.set(1, 0); // top-right
-  settingsButton.eventMode = 'static';
-  settingsButton.cursor = 'pointer';
+  settingsButton.eventMode = "static";
+  settingsButton.cursor = "pointer";
   app.stage.addChild(settingsButton);
 
   // Settings Popup
@@ -131,11 +150,22 @@ interface ReelAnim {
   try {
     musicOn = localStorage.getItem("slot_musicOn") !== "false";
     sfxOn = localStorage.getItem("slot_sfxOn") !== "false";
-  } catch {}
+  } catch {
+    /*ignore */
+  }
 
-  function makeToggle(text: string, state: boolean, y: number, cb: (val: boolean) => void): Container {
+  function makeToggle(
+    text: string,
+    state: boolean,
+    y: number,
+    cb: (val: boolean) => void,
+  ): Container {
     const cont = new Container();
-    const lbl = new Text(text, {fill: "white", fontSize: 24, fontWeight: "bold"});
+    const lbl = new Text(text, {
+      fill: "white",
+      fontSize: 24,
+      fontWeight: "bold",
+    });
     lbl.x = 24;
     lbl.y = 0;
     cont.addChild(lbl);
@@ -162,7 +192,7 @@ interface ReelAnim {
     renderBox();
     box.x = popupWidth - 80;
     box.y = 0;
-    box.eventMode = 'static';
+    box.eventMode = "static";
     box.cursor = "pointer";
     box.on("pointertap", () => {
       state = !state;
@@ -178,28 +208,43 @@ interface ReelAnim {
   const musicToggle = makeToggle("Music", musicOn, 30, (val) => {
     musicOn = val;
     AudioManager.setMusicVolume(musicOn ? 0.5 : 0);
-    try { localStorage.setItem("slot_musicOn", String(musicOn)); } catch {}
-    if (musicOn) AudioManager.playMusic(); else AudioManager.stopMusic();
+    try {
+      localStorage.setItem("slot_musicOn", String(musicOn));
+    } catch {
+      /*ignore */
+    }
+    if (musicOn) AudioManager.playMusic();
+    else AudioManager.stopMusic();
   });
 
   // SFX toggle
   const sfxToggle = makeToggle("Sound Effects", sfxOn, 90, (val) => {
     sfxOn = val;
     AudioManager.setSfxVolume(sfxOn ? 1 : 0);
-    try { localStorage.setItem("slot_sfxOn", String(sfxOn)); } catch {}
+    try {
+      localStorage.setItem("slot_sfxOn", String(sfxOn));
+    } catch {
+      /*ignore */
+    }
   });
 
   settingsPopup.addChild(musicToggle);
   settingsPopup.addChild(sfxToggle);
 
   // Close button
-  const closeBtn = new Text("Close", {fill: "white", fontSize: 20, fontWeight: "bold"});
+  const closeBtn = new Text("Close", {
+    fill: "white",
+    fontSize: 20,
+    fontWeight: "bold",
+  });
   closeBtn.anchor.set(0.5);
   closeBtn.eventMode = "static";
   closeBtn.cursor = "pointer";
   closeBtn.x = popupWidth / 2;
   closeBtn.y = popupHeight - 28;
-  closeBtn.on("pointertap", () => { settingsPopup.visible = false; });
+  closeBtn.on("pointertap", () => {
+    settingsPopup.visible = false;
+  });
   settingsPopup.addChild(closeBtn);
 
   app.stage.addChild(settingsPopup);
@@ -253,8 +298,12 @@ interface ReelAnim {
   // Layout
   function getStackBaseY(scale: number): number {
     const spacingY = scale * (SPRITE_SIZE + CELL_MARGIN);
-    const { startY } = computeGridOrigin(app.screen.width, app.screen.height, scale);
-    return startY + (ROW_COUNT - 1) * spacingY + scale * SPRITE_SIZE / 2;
+    const { startY } = computeGridOrigin(
+      app.screen.width,
+      app.screen.height,
+      scale,
+    );
+    return startY + (ROW_COUNT - 1) * spacingY + (scale * SPRITE_SIZE) / 2;
   }
 
   function relayoutAll() {
@@ -282,7 +331,11 @@ interface ReelAnim {
       }
     }
     const spacingX = scale * (SPRITE_SIZE + CELL_MARGIN);
-    const { startX, startY } = computeGridOrigin(app.screen.width, app.screen.height, scale);
+    const { startX, startY } = computeGridOrigin(
+      app.screen.width,
+      app.screen.height,
+      scale,
+    );
     for (let col = 0; col < REEL_COUNT; col++) {
       reelColumns[col].x = startX + col * spacingX;
       reelColumns[col].y = startY;
@@ -315,14 +368,14 @@ interface ReelAnim {
     }
 
     gridMask.clear();
-    const maskX = startX - scale * SPRITE_SIZE / 2;
-    const maskY = startY - scale * SPRITE_SIZE / 2;
+    const maskX = startX - (scale * SPRITE_SIZE) / 2;
+    const maskY = startY - (scale * SPRITE_SIZE) / 2;
     gridMask.beginFill(0xffffff);
     gridMask.drawRect(
       maskX,
       maskY,
       REEL_COUNT * scale * SPRITE_SIZE + (REEL_COUNT - 1) * scale * CELL_MARGIN,
-      ROW_COUNT * scale * SPRITE_SIZE + (ROW_COUNT - 1) * scale * CELL_MARGIN
+      ROW_COUNT * scale * SPRITE_SIZE + (ROW_COUNT - 1) * scale * CELL_MARGIN,
     );
     gridMask.endFill();
 
@@ -330,7 +383,7 @@ interface ReelAnim {
   }
 
   // Hacky, for inspector resizing
-  const container = document.getElementById('pixi-container')!;
+  const container = document.getElementById("pixi-container")!;
   const observer = new ResizeObserver(() => {
     app.renderer.resize(window.innerWidth, window.innerHeight);
     relayoutAll();
@@ -355,7 +408,7 @@ interface ReelAnim {
   }
   checkResize();
 
-  document.addEventListener('visibilitychange', () => {
+  document.addEventListener("visibilitychange", () => {
     app.renderer.resize(window.innerWidth, window.innerHeight);
     relayoutAll();
   });
@@ -370,9 +423,9 @@ interface ReelAnim {
       musicStarted = true;
     }
   }
-  window.addEventListener('pointerdown', ensureMusic, { once: true });
+  window.addEventListener("pointerdown", ensureMusic, { once: true });
 
-  spinButton.on('pointertap', () => {
+  spinButton.on("pointertap", () => {
     AudioManager.stopLoop("win");
 
     ensureMusic();
@@ -402,7 +455,11 @@ interface ReelAnim {
     const finalResultIndices: number[][] = [];
     reelAnimations = [];
     const spacingY = scale * (SPRITE_SIZE + CELL_MARGIN);
-    const { startY } = computeGridOrigin(app.screen.width, app.screen.height, scale);
+    const { startY } = computeGridOrigin(
+      app.screen.width,
+      app.screen.height,
+      scale,
+    );
 
     for (let col = 0; col < REEL_COUNT; col++) {
       const resultIndices = getRandomColumnResult(SYMBOLS);
@@ -420,7 +477,7 @@ interface ReelAnim {
         speed,
         duration,
         startGridY: startY,
-        phase: "spinning"
+        phase: "spinning",
       });
 
       const colSprites = reelColumns[col];
@@ -461,7 +518,8 @@ interface ReelAnim {
       if (spinBtnRotationPhase === 0) {
         if (Math.abs(spinButton.rotation - spinBtnRotationTarget) > 0.01) {
           const diff = spinBtnRotationTarget - spinButton.rotation;
-          spinButton.rotation += Math.sign(diff) * Math.min(Math.abs(diff), spinBtnRotationSpeed);
+          spinButton.rotation +=
+            Math.sign(diff) * Math.min(Math.abs(diff), spinBtnRotationSpeed);
         } else {
           spinButton.rotation = spinBtnRotationTarget;
           spinBtnRotationPhase = 1;
@@ -470,7 +528,8 @@ interface ReelAnim {
       } else if (spinBtnRotationPhase === 1) {
         if (Math.abs(spinButton.rotation) > 0.01) {
           const diff = 0 - spinButton.rotation;
-          spinButton.rotation += Math.sign(diff) * Math.min(Math.abs(diff), spinBtnRotationSpeed);
+          spinButton.rotation +=
+            Math.sign(diff) * Math.min(Math.abs(diff), spinBtnRotationSpeed);
         } else {
           spinButton.rotation = 0;
           spinBtnIsAnimating = false;
@@ -489,7 +548,10 @@ interface ReelAnim {
     for (const anim of reelAnimations) {
       if (anim.phase === "spinning") {
         allDone = false;
-        if (spinningFastForward || (performance.now() - anim.startTime > anim.duration)) {
+        if (
+          spinningFastForward ||
+          performance.now() - anim.startTime > anim.duration
+        ) {
           anim.spinning = false;
           anim.container.removeChildren();
           for (let row = 0; row < ROW_COUNT; row++) {
@@ -520,8 +582,14 @@ interface ReelAnim {
         }
       } else if (anim.phase === "bouncingOut") {
         allDone = false;
-        const t = Math.min(1, (performance.now() - (anim.bounceStart ?? 0)) / BOUNCE_OUT_TIME);
-        anim.container.y = (anim.bounceFrom ?? 0) + ((anim.bounceTo ?? 0) - (anim.bounceFrom ?? 0)) * (1 - Math.pow(1 - t, 1.7));
+        const t = Math.min(
+          1,
+          (performance.now() - (anim.bounceStart ?? 0)) / BOUNCE_OUT_TIME,
+        );
+        anim.container.y =
+          (anim.bounceFrom ?? 0) +
+          ((anim.bounceTo ?? 0) - (anim.bounceFrom ?? 0)) *
+            (1 - Math.pow(1 - t, 1.7));
         if (t >= 1) {
           anim.phase = "bouncingBack";
           anim.bounceStart = performance.now();
@@ -530,8 +598,13 @@ interface ReelAnim {
         }
       } else if (anim.phase === "bouncingBack") {
         allDone = false;
-        const t = Math.min(1, (performance.now() - (anim.bounceStart ?? 0)) / BOUNCE_BACK_TIME);
-        anim.container.y = (anim.bounceFrom ?? 0) + ((anim.bounceTo ?? 0) - (anim.bounceFrom ?? 0)) * t;
+        const t = Math.min(
+          1,
+          (performance.now() - (anim.bounceStart ?? 0)) / BOUNCE_BACK_TIME,
+        );
+        anim.container.y =
+          (anim.bounceFrom ?? 0) +
+          ((anim.bounceTo ?? 0) - (anim.bounceFrom ?? 0)) * t;
         if (t >= 1) {
           anim.container.y = anim.bounceTo ?? anim.container.y;
           anim.phase = "done";
