@@ -68,7 +68,7 @@ export class AudioManager {
         audio.play();
       }
     } catch {
-      /*ignore */
+        console.log("AudioManager play error");
     }
   }
 

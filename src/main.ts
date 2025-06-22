@@ -151,7 +151,13 @@ interface ReelAnim {
     musicOn = localStorage.getItem("slot_musicOn") !== "false";
     sfxOn = localStorage.getItem("slot_sfxOn") !== "false";
   } catch {
-    /*ignore */
+    console.log("AudioManager error");
+  }
+
+  AudioManager.setMusicVolume(musicOn ? 0.5 : 0);
+  AudioManager.setSfxVolume(sfxOn ? 1 : 0);
+  if (!musicOn) {
+    AudioManager.stopMusic();
   }
 
   function makeToggle(
@@ -211,7 +217,7 @@ interface ReelAnim {
     try {
       localStorage.setItem("slot_musicOn", String(musicOn));
     } catch {
-      /*ignore */
+      console.log("Music Toggle error");
     }
     if (musicOn) AudioManager.playMusic();
     else AudioManager.stopMusic();
@@ -219,14 +225,17 @@ interface ReelAnim {
 
   // SFX toggle
   const sfxToggle = makeToggle("Sound Effects", sfxOn, 90, (val) => {
-    sfxOn = val;
-    AudioManager.setSfxVolume(sfxOn ? 1 : 0);
-    try {
-      localStorage.setItem("slot_sfxOn", String(sfxOn));
-    } catch {
-      /*ignore */
-    }
-  });
+  sfxOn = val;
+  AudioManager.setSfxVolume(sfxOn ? 1 : 0);
+  try {
+    localStorage.setItem("slot_sfxOn", String(sfxOn));
+  } catch {
+    console.log("SFX Toggle error");
+  }
+  if (!sfxOn) {
+    AudioManager.stopLoop("win");
+  }
+});
 
   settingsPopup.addChild(musicToggle);
   settingsPopup.addChild(sfxToggle);
