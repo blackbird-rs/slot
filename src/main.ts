@@ -6,6 +6,7 @@ import {
 } from "./slotGrid";
 import { createTextFieldStyle } from "./ui";
 import { calculateWinAmount } from "./logic";
+import { AudioManager } from "./audioManager";
 
 // --- Responsive helpers ---
 function getLayoutMode(width: number, height: number): LayoutMode {
@@ -23,7 +24,7 @@ const SYMBOLS = [
   { img: "/assets/sym4.png", frame: "/assets/sym4_frame.png" },
 ];
 
-const BACKGROUND_IMAGE = "/assets/bg.jpeg"; // Place your background image here (see note below)
+const BACKGROUND_IMAGE = "/assets/bg.jpeg"; // Using bg.jpeg as requested
 
 const SPIN_DURATION = 1100;
 const BET_AMOUNT = 2;
@@ -50,9 +51,12 @@ interface ReelAnim {
   await app.init({ background: "#1099bb", resizeTo: window });
   document.getElementById("pixi-container")!.appendChild(app.canvas);
 
+  // --- Init audio ---
+  await AudioManager.init();
+
   // --- Load background image and game assets ---
   await Assets.load([
-    BACKGROUND_IMAGE, // Make sure this file exists in your assets (see note below)
+    BACKGROUND_IMAGE,
     ...SYMBOLS.flatMap(s => [s.img, s.frame]),
     "/assets/spin.svg"
   ]);
@@ -67,7 +71,6 @@ interface ReelAnim {
     const screenW = app.screen.width;
     const screenH = app.screen.height;
     const texture = bgSprite.texture;
-    //if (!texture.valid) return;
 
     // Stretch to cover (cover mode)
     const scaleX = screenW / texture.width;
@@ -260,7 +263,22 @@ interface ReelAnim {
 
   relayoutAll();
 
+  // --- Play background music once user interacts ---
+  let musicStarted = false;
+  function ensureMusic() {
+    if (!musicStarted) {
+      AudioManager.playMusic();
+      musicStarted = true;
+    }
+  }
+  window.addEventListener('pointerdown', ensureMusic, { once: true });
+
   spinButton.on('pointertap', () => {
+    // Stop win sound (even if it was still playing/looping)
+    AudioManager.stopLoop("win");
+
+    ensureMusic();
+
     if (isSpinning && !spinningFastForward) {
       // Fast forward if already spinning!
       spinningFastForward = true;
@@ -275,6 +293,12 @@ interface ReelAnim {
 
     isSpinning = true;
     spinningFastForward = false;
+
+    // Play spin button sound (only at spin start)
+    AudioManager.play("spin");
+
+    // Start reel spinning sound (looped)
+    AudioManager.playLoop("reel");
 
     // --- Animate spin button rotation: to one side, then back ---
     spinBtnIsAnimating = true;
@@ -440,6 +464,10 @@ interface ReelAnim {
     if (allDone && isSpinning) {
       isSpinning = false;
       spinningFastForward = false;
+
+      // Stop reel sound
+      AudioManager.stopLoop("reel");
+
       // --- Show win ---
       const resultIndices: number[][] = (spinButton as any)._finalResultIndices;
       const winningPositions = getWinningPositions(resultIndices);
@@ -449,6 +477,8 @@ interface ReelAnim {
       if (winAmount > 0) {
         balance += winAmount;
         updateBalanceText();
+        // Play win sound (now looped until next spin)
+        AudioManager.playLoop("win");
       }
       updateWinText(winAmount);
 
