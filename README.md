@@ -98,3 +98,12 @@ serve dist
 - The win amount is calculated based on the number of matching symbols in a row.
 
 ---
+
+
+## Possible further improvements
+
+- Adding increase/decrease bet amount, and adjusting win calculation based on that and the math
+- Adding autoplay function
+- Adding special symbols for bonus spins
+
+---
